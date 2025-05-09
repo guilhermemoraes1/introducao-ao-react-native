@@ -2,16 +2,29 @@ import { StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import Venda from '@/components/venda/Venda';
 import MyScrollView from '@/components/MyScrollView';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IVenda } from '@/interfaces/IVenda';
 import VendaModal from '@/components/modals/VendaModal';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function BooksListScreen() {
     const [vendas, setVendas] = useState<IVenda[]>([]);
     const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [idVenda, setIdVenda] = useState(1);
     const [selectedVenda, setSelectedVenda] = useState<IVenda>();
+
+    useEffect(() => {
+        async function getData() {
+            try {
+                const data = await AsyncStorage.getItem("@App:vendas");
+                const vendasData = data != null ? JSON.parse(data) : [];
+                setVendas(vendasData);
+            } catch (error) {
+            }
+        }
+
+        getData()
+    }, [])
 
     const onAdd = (produto: string, preco: string, id?: number) => {
 
@@ -28,6 +41,7 @@ export default function BooksListScreen() {
             ];
 
             setVendas(vendasPlus);
+            AsyncStorage.setItem("@App:vendas", JSON.stringify(vendasPlus));
             setIdVenda(idVenda + 1);
         } else {
             vendas.forEach(venda => {
@@ -36,6 +50,8 @@ export default function BooksListScreen() {
                     venda.preco = preco;
                 }
             })
+
+            AsyncStorage.setItem("@App:vendas", JSON.stringify(vendas));
         }
 
         setModalVisible(false);
@@ -53,6 +69,7 @@ export default function BooksListScreen() {
         }
 
         setVendas(newVendaList);
+        AsyncStorage.setItem("@App:vendas", JSON.stringify(newVendaList));
         setModalVisible(false);
     }
 

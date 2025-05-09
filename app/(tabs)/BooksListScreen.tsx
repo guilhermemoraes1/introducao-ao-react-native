@@ -2,15 +2,51 @@ import { StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import Book from '@/components/book/Book';
 import MyScrollView from '@/components/MyScrollView';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IBook } from '@/interfaces/IBook';
 import BookModal from '@/components/modals/BookModal';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 
 export default function BooksListScreen() {
     const [books, setBooks] = useState<IBook[]>([]);
     const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [selectedBook, setSelectedBook] = useState<IBook>();
+    const [location, setLocation] = useState({});
+    const [errorMsg, setErrorMsg] = useState('');
+
+    useEffect(() => {
+        async function getData() {
+            try {
+                const data = await AsyncStorage.getItem("@App:books");
+                const booksData = data != null ? JSON.parse(data) : [];
+                setBooks(booksData);
+            } catch (error) {
+            }
+        }
+
+        getData()
+    }, [])
+
+    useEffect(() => {
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({});
+            setLocation(location);
+        })();
+    }, [])
+
+    let text = 'Waiting...';
+    if (errorMsg) {
+        text = errorMsg;
+    } else if (location) {
+        text = JSON.stringify(location);
+    }
 
     const onAdd = (name: string, author: string, publisher:string, pages:string, isbn: string, id?: number) => {
 
@@ -30,6 +66,7 @@ export default function BooksListScreen() {
             ];
 
             setBooks(booksPlus);
+            AsyncStorage.setItem("@App:books", JSON.stringify(booksPlus));
         } else {
             books.forEach(book => {
                 if(book.id == id) {
@@ -40,6 +77,8 @@ export default function BooksListScreen() {
                     book.isbn = isbn;
                 }
             })
+
+            AsyncStorage.setItem("@App:books", JSON.stringify(books));
         }
         
         setModalVisible(false);
@@ -57,6 +96,7 @@ export default function BooksListScreen() {
         }
 
         setBooks(newBookList);
+        AsyncStorage.setItem("@App:books", JSON.stringify(newBookList));
         setModalVisible(false);
     }
 
@@ -81,6 +121,7 @@ export default function BooksListScreen() {
                 <TouchableOpacity onPress={() => openModal()}>
                 <Text style={styles.headerButton}> Add a new book </Text>
                 </TouchableOpacity>
+                <Text >{text}</Text>
             </ThemedView>
             <ThemedView style={styles.container}>
             
